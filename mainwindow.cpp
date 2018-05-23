@@ -1,21 +1,26 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "QDebug"
+
 
 QString text_number;
 int number;
+int number_of_zeros;
+QString zeros;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    setWindowTitle("HexBinConverter");
+
     QValidator *validator = new QIntValidator(1, 2147483646, this);
     ui->dec_line->setValidator(validator);
     QRegularExpression mask("(?:(?:[0-9A-Fa-fxX]{1,2}[0-9A-Fa-f]{1,20}))");
     validator = new QRegularExpressionValidator(mask,this);
     ui->hex_line->setValidator(validator);
-    mask.setPattern("^(?:(?:[0-1][b0-1][0-1]{1,32})*)$");
+    mask.setPattern("(?:(?:[0-1bB]{1,2}[0-1]{1,32}))");
     validator = new QRegularExpressionValidator(mask,this);
     ui->bin_line->setValidator(validator);
 }
@@ -27,15 +32,30 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_bin_line_textEdited(const QString &arg1)
 {
-    if (ui->bin_line->text().contains("b"))
+    switch (ui->bin_line->text().indexOf("b",0,Qt::CaseInsensitive))
     {
+    case 0:
+        ui->bin_line->setText(ui->bin_line->text().prepend("0"));
+        // WITHOUT break;
+    case 1:
         number= ui->bin_line->text().remove(0,2).toUInt(&bStatus,2);
-    }
-    else
-    {
+        number_of_zeros=(ui->bin_line->text().indexOf('1')-2)/4;
+        if(ui->bin_line->text().contains("0b",Qt::CaseInsensitive)==false)
+        {
+            ui->bin_line->setText(ui->bin_line->text().replace(0,1,"0"));
+        }
+        break;
+    case -1://b not found
         number= ui->bin_line->text().toUInt(&bStatus,2);
+        number_of_zeros=ui->bin_line->text().indexOf('1')/4;
+        break;
     }
-    text_number="0x"+QString::number(number,16);
+    zeros="";
+    for(int k=0;k<number_of_zeros;k++)
+    {
+        zeros=zeros+"0";
+    }
+    text_number="0x"+zeros+QString::number(number,16);
     ui->hex_line->setText(text_number);
     text_number=QString::number(number,10);
     ui->dec_line->setText(text_number);
@@ -52,15 +72,50 @@ void MainWindow::on_dec_line_textEdited(const QString &arg1)
 
 void MainWindow::on_hex_line_textEdited(const QString &arg1)
 {
-    if (ui->hex_line->text().contains("x",Qt::CaseInsensitive))
+    switch (ui->hex_line->text().indexOf("x",0,Qt::CaseInsensitive))
     {
+    case 0:
+        ui->hex_line->setText(ui->hex_line->text().prepend("0"));
+        // WITHOUT break;
+    case 1:
         number= ui->hex_line->text().remove(0,2).toUInt(&bStatus,16);
-    }
-    else
-    {
+        if(ui->hex_line->text().contains("0x",Qt::CaseInsensitive)==false)
+        {
+            ui->hex_line->setText(ui->hex_line->text().replace(0,1,"0"));
+        }
+        number_of_zeros=ui->hex_line->text().indexOf(QRegExp("0[1-9a-fA-F]"))-2;
+        break;
+    case -1://x not found
         number= ui->hex_line->text().toUInt(&bStatus,16);
+        number_of_zeros=ui->hex_line->text().indexOf(QRegExp("0[1-9a-fA-F]"));
+        break;
     }
-    text_number="0b"+QString::number(number,2);
+    zeros="";
+    for(int k=0;k<=number_of_zeros;k++)
+    {
+        zeros=zeros+"0000";
+    }
+    switch (number) {
+    case 0:
+        zeros=zeros+"0000";
+        break;
+    case 1:
+        zeros=zeros+"000";
+        break;
+    case 2:
+    case 3:
+        zeros=zeros+"00";
+        break;
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+        zeros=zeros+"0";
+        break;
+    default:
+        break;
+    }
+    text_number="0b"+zeros+QString::number(number,2);
     ui->bin_line->setText(text_number);
     text_number=QString::number(number,10);
     ui->dec_line->setText(text_number);
